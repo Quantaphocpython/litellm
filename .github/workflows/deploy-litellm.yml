@@ -1,4 +1,4 @@
-name: Build and Deploy LiteLLM Proxy
+name: Build and Push to GHCR, then Deploy to Render
 
 on:
   push:
@@ -6,10 +6,16 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
-  build-and-deploy:
-    name: Build Container & Trigger Render Deploy
+  build-and-push:
+    name: Build Docker Image and Push to GHCR
     runs-on: ubuntu-latest
+    timeout-minutes: 60
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -17,17 +23,53 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker Image Check
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/litellm
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha,format=short
+
+      - name: Build and Push Docker Image to GHCR
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
-          push: false
-          tags: litellm-proxy:latest
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/litellm:buildcache
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/litellm:buildcache,mode=max
 
+  deploy-to-render:
+    name: Trigger Render Deploy
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: success()
+
+    steps:
       - name: Trigger Render Deploy Hook
-        if: ${{ secrets.RENDER_LITELLM_DEPLOY_HOOK != '' }}
+        env:
+          RENDER_HOOK: ${{ secrets.RENDER_LITELLM_DEPLOY_HOOK }}
         run: |
-          echo "Triggering Render Deploy Hook for LiteLLM Proxy..."
-          curl -s -X POST "${{ secrets.RENDER_LITELLM_DEPLOY_HOOK }}"
-          echo "Render Deploy Hook triggered successfully!"
+          if [ -z "$RENDER_HOOK" ]; then
+            echo "Warning: RENDER_LITELLM_DEPLOY_HOOK secret is not set. Skipping deploy."
+            exit 0
+          fi
+          echo "Triggering Render deploy for LiteLLM..."
+          response=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$RENDER_HOOK")
+          if [ "$response" -ge 200 ] && [ "$response" -lt 300 ]; then
+            echo "Render deploy triggered successfully (HTTP $response)."
+          else
+            echo "Failed to trigger Render deploy (HTTP $response)."
+            exit 1
+          fi
