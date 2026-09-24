@@ -1211,6 +1211,13 @@ async def proxy_startup_event(app: FastAPI) -> AsyncGenerator[None, None]:
 
     init_verbose_loggers()
 
+    # START KEEP ALIVE BACKGROUND PING TASK FOR RENDER / FREE CLOUD HOSTING
+    try:
+        from litellm.proxy.keep_alive import start_keep_alive
+        asyncio.create_task(start_keep_alive())
+    except Exception as _e:
+        verbose_proxy_logger.warning("Failed to start KeepAlive task: %s", _e)
+
     prometheus_multiproc_dir: Final = os.environ.get("PROMETHEUS_MULTIPROC_DIR")
     if prometheus_multiproc_dir:
         mark_dead_workers(prometheus_multiproc_dir)
