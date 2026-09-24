@@ -1,0 +1,33 @@
+name: Build and Deploy LiteLLM Proxy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    name: Build Container & Trigger Render Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Image Check
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          tags: litellm-proxy:latest
+
+      - name: Trigger Render Deploy Hook
+        if: ${{ secrets.RENDER_LITELLM_DEPLOY_HOOK != '' }}
+        run: |
+          echo "Triggering Render Deploy Hook for LiteLLM Proxy..."
+          curl -s -X POST "${{ secrets.RENDER_LITELLM_DEPLOY_HOOK }}"
+          echo "Render Deploy Hook triggered successfully!"
