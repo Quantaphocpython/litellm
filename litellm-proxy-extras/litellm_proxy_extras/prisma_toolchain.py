@@ -193,6 +193,8 @@ def _kill_process_group(process: "subprocess.Popen[str]") -> None:
 
 
 def prisma_cli_available() -> bool:
+    if os.getenv("DISABLE_PRISMA_CLI", "").lower() in ("true", "1", "yes"):
+        return False
     """Whether some way of running the Prisma CLI exists: the console script on PATH or the importable package."""
     if shutil.which(PRISMA_CONSOLE_SCRIPT) is not None:
         return True
