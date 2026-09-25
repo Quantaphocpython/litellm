@@ -187,7 +187,16 @@ ENV PATH="/app/.venv/bin:${PATH}" \
     PRISMA_SKIP_POSTINSTALL_GENERATE=1 \
     PRISMA_HIDE_UPDATE_MESSAGE=1 \
     PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 \
-    PRISMA_OFFLINE_MODE=true
+    PRISMA_OFFLINE_MODE=true \
+    WEB_CONCURRENCY=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONOPTIMIZE=1 \
+    MALLOC_TRIM_THRESHOLD_=65536 \
+    LITELLM_DISABLE_TELEMETRY=True \
+    DISABLE_SCHEMA_UPDATE=True \
+    DISABLE_ADMIN_UI=True \
+    STORE_MODEL_IN_DB=False \
+    DISABLE_PRISMA_HEALTH_CHECK_ON_STARTUP=True
 
 RUN mkdir -p /nonexistent /app/.cache /var/lib/litellm/assets /var/lib/litellm/ui && \
     chown -R nobody:nogroup /app /var/lib/litellm/ui /var/lib/litellm/assets /nonexistent && \

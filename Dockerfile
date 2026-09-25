@@ -137,7 +137,16 @@ ENV PATH="/app/.venv/bin:${PATH}" \
     PRISMA_OFFLINE_MODE=true \
     CHECKPOINT_DISABLE=1 \
     PRISMA_TELEMETRY_INFORMATION=0 \
-    LITELLM_PRISMA_BOOTSTRAP_TIMEOUT=10
+    LITELLM_PRISMA_BOOTSTRAP_TIMEOUT=10 \
+    WEB_CONCURRENCY=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONOPTIMIZE=1 \
+    MALLOC_TRIM_THRESHOLD_=65536 \
+    LITELLM_DISABLE_TELEMETRY=True \
+    DISABLE_SCHEMA_UPDATE=True \
+    DISABLE_ADMIN_UI=True \
+    STORE_MODEL_IN_DB=False \
+    DISABLE_PRISMA_HEALTH_CHECK_ON_STARTUP=True
 
 # Copy only what runtime needs. The application is installed inside the venv;
 # the rest of the builder's /app is source and build metadata that must not
